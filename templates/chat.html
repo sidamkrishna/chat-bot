@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Simple AI Chat App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 10px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .user-message {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .ai-message {
+            background: #e2e8f0;
+            color: #2d3748;
+            border-left: 4px solid #667eea;
+        }
+        .other-message {
+            background: #ed8936;
+            color: white;
+        }
+        .message-info {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            gap: 10px;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #messageInput:focus {
+            border-color: #667eea;
+        }
+        #sendBtn {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+        #sendBtn:hover {
+            background: #5a67d8;
+        }
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .ai-hint {
+            background: #ebf8ff;
+            color: #2b6cb0;
+            padding: 10px 15px;
+            margin: 10px 20px;
+            border-radius: 8px;
+            border-left: 4px solid #3182ce;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>🤖 AI Chat App</h2>
+        <div>
+            <span id="welcomeMsg">Welcome!</span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="ai-hint">
+            💡 <strong>Tip:</strong> Start your message with "@ai" or include "hey ai" to get an AI response!
+        </div>
+        
+        <div class="messages" id="messages">
+            <!-- Messages will appear here -->
+        </div>
+        <div id="loadingIndicator" style="display: none; text-align: center; padding: 20px; color: #666;">
+            Loading messages...
+        </div>
+        
+        <div class="input-container">
+            <input type="text" id="messageInput" placeholder="Type your message... (try '@ai hello!' for AI response)" />
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username');
+        
+        if (!token) {
+            window.location.href = '/';
+        }
+        
+        document.getElementById('welcomeMsg').textContent = `Welcome, ${username}!`;
+        
+        async function loadMessages() {
+            try {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                loadingIndicator.style.display = 'block';
+                
+                const response = await fetch('/api/messages', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const messages = await response.json();
+                    displayMessages(messages);
+                } else {
+                    console.error('Failed to load messages:', response.status, response.statusText);
+                    const errorText = await response.text();
+                    console.error('Error details:', errorText);
+                    
+                    // Show user-friendly error message
+                    const messagesDiv = document.getElementById('messages');
+                    messagesDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Failed to load messages. Please try again.</div>';
+                }
+            } catch (error) {
+                console.error('Network error loading messages:', error);
+                
+                // Show user-friendly error message for network errors
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Network error. Please check your connection and try again.</div>';
+            } finally {
+                const loadingIndicator = document.getElementById('loadingIndicator');
+                loadingIndicator.style.display = 'none';
+            }
+        }
+        
+        function displayMessages(messages) {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = '';
+            
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                
+                if (msg.is_ai) {
+                    messageDiv.className += ' ai-message';
+                } else if (msg.username === username) {
+                    messageDiv.className += ' user-message';
+                } else {
+                    messageDiv.className += ' other-message';
+                }
+                
+                messageDiv.innerHTML = `
+                    <div>${msg.content}</div>
+                    <div class="message-info">
+                        ${msg.username} • ${new Date(msg.created_at).toLocaleTimeString()}
+                        ${msg.is_ai ? ' • ' + (msg.ai_model || 'AI') : ''}
+                    </div>
+                `;
+                
+                messagesDiv.appendChild(messageDiv);
+            });
+            
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            
+            if (!content) return;
+            
+            try {
+                const response = await fetch('/api/messages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ content })
+                });
+                
+                if (response.ok) {
+                    input.value = '';
+                    // Reload messages after sending (reduced delay for better responsiveness)
+                    setTimeout(loadMessages, 200);
+                } else {
+                    console.error('Failed to send message:', response.status, response.statusText);
+                    const errorText = await response.text();
+                    console.error('Error details:', errorText);
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('username');
+            window.location.href = '/';
+        }
+        
+        // Enter key to send message
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Load messages on page load
+        loadMessages();
+        
+        // Auto-refresh messages every 15 seconds (less frequent for better performance)
+        setInterval(loadMessages, 15000);
+        
+        // Add retry mechanism for failed requests
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        async function retryLoadMessages() {
+            if (retryCount < maxRetries) {
+                retryCount++;
+                console.log(`Retrying to load messages (attempt ${retryCount}/${maxRetries})`);
+                setTimeout(loadMessages, 2000 * retryCount); // Exponential backoff
+            }
+        }
+    </script>
+</body>
+</html>

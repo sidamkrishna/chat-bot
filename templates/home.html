@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat App with AI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        .toggle-btn {
+            background: #764ba2;
+        }
+        .toggle-btn:hover {
+            background: #6b46a1;
+        }
+        .error {
+            color: #e53e3e;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .ai-info {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .ai-info p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Simple Chat with AI</h1>
+        
+        <div class="ai-info">
+            <p><strong>AI Feature:</strong> Type "@ai" or "hey ai" in your messages to get AI responses!</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <form id="authForm">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" required>
+            </div>
+            
+            <button type="submit" id="submitBtn">Login</button>
+            <button type="button" id="toggleBtn" class="toggle-btn">Switch to Register</button>
+        </form>
+    </div>
+
+    <script>
+        let isLogin = true;
+        const form = document.getElementById('authForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const errorDiv = document.getElementById('error');
+
+        toggleBtn.onclick = () => {
+            isLogin = !isLogin;
+            submitBtn.textContent = isLogin ? 'Login' : 'Register';
+            toggleBtn.textContent = isLogin ? 'Switch to Register' : 'Switch to Login';
+            errorDiv.style.display = 'none';
+        };
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            const endpoint = isLogin ? '/api/login' : '/api/register';
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('username', username);
+                    window.location.href = '/chat';
+                } else {
+                    errorDiv.textContent = data.detail;
+                    errorDiv.style.display = 'block';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Network error occurred';
+                errorDiv.style.display = 'block';
+            }
+        };
+    </script>
+</body>
+</html>
